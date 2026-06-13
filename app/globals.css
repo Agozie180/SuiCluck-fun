@@ -1,0 +1,9 @@
+@import "@mysten/dapp-kit/dist/index.css";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { --background: 222 48% 6%; --foreground: 48 100% 96%; --card: 222 42% 9%; --card-foreground: 48 100% 96%; --muted: 222 28% 16%; --muted-foreground: 212 18% 74%; --primary: 197 100% 52%; --primary-foreground: 222 48% 6%; --secondary: 38 100% 56%; --secondary-foreground: 222 48% 6%; --accent: 14 100% 62%; --accent-foreground: 48 100% 96%; --border: 214 32% 20%; --input: 214 32% 20%; --ring: 197 100% 52%; }
+* { @apply border-border; }
+body { @apply min-h-screen bg-background text-foreground antialiased; background-image: radial-gradient(circle at 20% 10%, rgba(255,190,71,.16), transparent 28rem), radial-gradient(circle at 85% 0%, rgba(0,180,255,.18), transparent 30rem), linear-gradient(180deg, #07111f 0%, #0d1326 55%, #111827 100%); }
+.chicken-grid { background-image: linear-gradient(rgba(255,255,255,.045) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.045) 1px, transparent 1px); background-size: 28px 28px; }
