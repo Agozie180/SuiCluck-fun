@@ -25,7 +25,7 @@ export function WalletConnectButton({ reason }: { reason?: string }) {
   }
 
   return (
-    <div className="rounded-lg border border-secondary/25 bg-secondary/10 p-4">
+    <div className="rounded-lg border border-secondary/25 bg-secondary/10 p-4 shadow-lg shadow-secondary/5">
       <div className="mb-3 flex items-start gap-3">
         <Wallet className="mt-0.5 text-secondary" size={20} />
         <div>
@@ -37,7 +37,7 @@ export function WalletConnectButton({ reason }: { reason?: string }) {
       </div>
       <ConnectButton
         connectText="Connect Sui Wallet"
-        className="inline-flex h-11 w-full items-center justify-center rounded-md bg-secondary px-5 text-sm font-bold text-secondary-foreground transition hover:bg-secondary/90"
+        className="inline-flex h-11 w-full items-center justify-center rounded-md bg-secondary px-5 text-sm font-bold text-secondary-foreground transition hover:-translate-y-0.5 hover:bg-secondary/90"
       />
     </div>
   );

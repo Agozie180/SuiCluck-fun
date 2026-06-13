@@ -124,14 +124,14 @@ export function ZkLoginButton() {
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-3 sm:grid-cols-2">
-        <AuthButton label="Continue with Google" busy={busyProvider === "google"} disabled={Boolean(busyProvider)} onClick={() => connectProvider("google")} />
-        <AuthButton icon={<Mail size={18} />} label="Continue with Email" busy={busyProvider === "email"} disabled={Boolean(busyProvider)} onClick={() => connectProvider("email")} />
-        <AuthButton icon={<Send size={18} />} label="Continue with X" busy={busyProvider === "twitter"} disabled={Boolean(busyProvider)} onClick={connectTwitter} />
+      <div className="grid gap-3 md:grid-cols-3">
+        <AuthButton title="Sign in with Enoki Google zkLogin" label="Continue with Google" busy={busyProvider === "google"} disabled={Boolean(busyProvider)} onClick={() => connectProvider("google")} />
+        <AuthButton title="Use Enoki email login when enabled for this project" icon={<Mail size={18} />} label="Continue with Email" busy={busyProvider === "email"} disabled={Boolean(busyProvider)} onClick={() => connectProvider("email")} />
+        <AuthButton title="X is shown for the desired flow; wallet fallback remains available if provider support is unavailable" icon={<Send size={18} />} label="Continue with X" busy={busyProvider === "twitter"} disabled={Boolean(busyProvider)} onClick={connectTwitter} />
       </div>
 
       {error && (
-        <div className="rounded-lg border border-red-400/25 bg-red-400/10 p-4 text-sm text-red-100">
+        <div className="rounded-lg border border-red-400/25 bg-red-400/10 p-4 text-sm text-red-100 animate-in fade-in slide-in-from-top-1">
           <p className="flex items-start gap-2 font-black text-red-200"><TriangleAlert size={16} /> zkLogin needs attention</p>
           <p className="mt-2 leading-relaxed text-red-100/90">{error}</p>
         </div>
@@ -146,13 +146,14 @@ export function ZkLoginButton() {
   );
 }
 
-function AuthButton({ icon, label, busy, disabled, onClick }: { icon?: React.ReactNode; label: string; busy: boolean; disabled: boolean; onClick: () => void }) {
+function AuthButton({ icon, label, busy, disabled, onClick, title }: { icon?: React.ReactNode; label: string; busy: boolean; disabled: boolean; onClick: () => void; title: string }) {
   return (
     <Button
+      title={title}
       onClick={onClick}
       disabled={disabled}
       variant={label.includes("Google") ? "default" : "outline"}
-      className={`h-[52px] rounded-lg px-5 text-base font-black transition hover:-translate-y-0.5 ${label.includes("Google") ? "bg-white text-black shadow-lg shadow-white/10 hover:bg-gray-100" : "border-white/15 bg-white/5 text-white hover:bg-white/10"}`}
+      className={`h-[52px] rounded-lg px-4 text-sm font-black transition hover:-translate-y-0.5 sm:text-base ${label.includes("Google") ? "bg-white text-black shadow-lg shadow-white/10 hover:bg-gray-100" : "border-white/15 bg-white/5 text-white hover:bg-white/10"}`}
     >
       {busy ? <Loader2 className="animate-spin" size={18} /> : icon}
       {label}

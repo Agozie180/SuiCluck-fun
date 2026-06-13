@@ -166,7 +166,7 @@ export function LaunchForm() {
                 <span className="font-semibold">{estimate}%</span>
               </div>
               <div className="h-4 overflow-hidden rounded-full bg-white/10">
-                <div className="h-full bg-gradient-to-r from-primary via-secondary to-accent transition-all" style={{ width: `${estimate}%` }} />
+                <div className="h-full rounded-full bg-gradient-to-r from-primary via-secondary to-accent transition-all duration-500" style={{ width: `${estimate}%` }} />
               </div>
             </div>
           </CardContent>
@@ -200,7 +200,7 @@ export function LaunchForm() {
             )}
             {launchError && <div className="rounded-3xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-100">{launchError}</div>}
             {launchResult && (
-              <div className="rounded-3xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-sm text-emerald-100 shadow-lg shadow-emerald-950/20">
+              <div className="rounded-3xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-sm text-emerald-100 shadow-lg shadow-emerald-950/20 animate-in fade-in zoom-in-95">
                 <p className="flex items-center gap-2 font-bold">
                   <CheckCircle2 className="text-emerald-300" size={18} />
                   Launch confirmed on testnet.
@@ -217,7 +217,7 @@ export function LaunchForm() {
                 </div>
               </div>
             )}
-            <Button size="lg" variant="secondary" className="w-full text-lg" onClick={launch} disabled={launching || !address}>
+            <Button size="lg" variant="secondary" className="w-full text-lg shadow-lg shadow-secondary/10 transition hover:-translate-y-0.5" onClick={launch} disabled={launching || !address}>
               {launching ? <Loader2 className="animate-spin" size={20} /> : <Rocket size={20} />}
               {launchStep === "wallet" ? "Confirm in wallet..." : launchStep === "confirming" ? "Confirming on Sui..." : "Launch on testnet"}
             </Button>
@@ -233,7 +233,7 @@ export function LaunchForm() {
             <CardTitle>Launch preview</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="overflow-hidden rounded-3xl border border-white/10 bg-white/5">
+            <div className="overflow-hidden rounded-3xl border border-white/10 bg-white/5 shadow-2xl shadow-black/10">
               <img src={meme.imageUrl} alt={`${meme.name} preview`} className="aspect-video w-full object-cover" />
               <div className="p-4">
                 <p className="text-sm text-muted-foreground">Token</p>

@@ -86,31 +86,32 @@ export function AIMemeGenerator({ onGenerated }: { onGenerated: (meme: Generated
           value={prompt}
           onChange={(event) => setPrompt(event.target.value)}
           placeholder="Try: moon chicken, cyber laser rooster, gold chicken surfer..."
-          className="min-h-[140px]"
+          className="min-h-[140px] transition focus-visible:ring-secondary"
         />
 
         <Button
           onClick={generate}
           disabled={loading || !(promptRef.current?.value ?? prompt).trim()}
           variant="secondary"
-          className="h-[52px] w-full rounded-lg text-base font-black"
+          className="h-[52px] w-full rounded-lg text-base font-black shadow-lg shadow-secondary/10 transition hover:-translate-y-0.5"
         >
           {loading ? <Loader2 className="animate-spin" size={18} /> : <Sparkles size={18} />}
-          {loading ? "Hatching your legendary meme..." : "Generate chicken alpha"}
+          {loading ? "Hatching your legendary meme... 🐔" : "Generate chicken alpha"}
         </Button>
 
         {loading && (
-          <div className="overflow-hidden rounded-3xl border border-secondary/20 bg-white/5">
-            <div className="relative grid aspect-video place-items-center bg-[radial-gradient(circle_at_50%_30%,rgba(255,176,32,.30),transparent_30%),linear-gradient(135deg,rgba(77,163,255,.24),rgba(255,90,54,.18))]">
+          <div className="overflow-hidden rounded-3xl border border-secondary/20 bg-white/5 shadow-2xl shadow-black/20">
+            <div className="relative grid aspect-video place-items-center bg-[radial-gradient(circle_at_42%_28%,rgba(255,176,32,.35),transparent_29%),radial-gradient(circle_at_72%_72%,rgba(77,163,255,.28),transparent_30%),linear-gradient(135deg,rgba(17,24,39,.96),rgba(255,90,54,.20))]">
               <div className="absolute left-8 top-8 h-16 w-16 animate-pulse rounded-full bg-secondary/30 blur-2xl" />
               <div className="absolute bottom-10 right-10 h-24 w-24 animate-pulse rounded-full bg-primary/30 blur-2xl" />
-              <div className="relative w-[min(82%,420px)] rounded-3xl border border-white/10 bg-black/30 px-5 py-5 text-center backdrop-blur">
-                <div className="mx-auto mb-3 grid size-16 place-items-center rounded-full bg-secondary/20">
+              <div className="absolute left-1/2 top-8 -translate-x-1/2 animate-bounce text-5xl">🐔</div>
+              <div className="relative w-[min(86%,440px)] rounded-3xl border border-white/10 bg-black/35 px-5 py-5 text-center backdrop-blur">
+                <div className="mx-auto mb-3 grid size-16 place-items-center rounded-full bg-secondary/20 shadow-inner shadow-secondary/20">
                   <Wand2 className="animate-pulse text-secondary" size={28} />
                 </div>
-                <p className="text-sm font-black text-white">Hatching your legendary meme...</p>
+                <p className="text-sm font-black text-white">Hatching your legendary meme... 🐔</p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Reading prompt, choosing drip, painting feathers.
+                  Choosing pose, drip, background chaos, and ticker magic.
                 </p>
                 <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/10">
                   <div
@@ -131,7 +132,7 @@ export function AIMemeGenerator({ onGenerated }: { onGenerated: (meme: Generated
         )}
 
         {!loading && meme && (
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
+          <div className="rounded-3xl border border-white/10 bg-white/5 p-4 transition duration-300 animate-in fade-in zoom-in-95">
             <img
               src={meme.imageUrl}
               alt={`${meme.name} generated meme art`}

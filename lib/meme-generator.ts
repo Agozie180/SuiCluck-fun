@@ -18,7 +18,8 @@ type Scene = {
   words: string[];
 };
 
-type RenderMode = "sticker" | "trading card" | "glitch poster" | "comic cover" | "vaporwave";
+type RenderMode = "sticker" | "trading card" | "glitch poster" | "comic cover" | "vaporwave" | "wanted poster" | "pixel stamp";
+type Pose = "hero" | "leaping" | "surfing" | "charging" | "blastoff" | "perched";
 
 const SCENES: Scene[] = [
   {
@@ -89,11 +90,14 @@ const SCENES: Scene[] = [
 const ADJECTIVES = ["Turbo", "Spicy", "Quantum", "Mega", "Diamond", "Lucky", "Viral", "Based"];
 const TRAITS = ["Volt", "Pixel", "Cetus", "Bubble", "Comet", "Vault", "Bonk", "Splash", "Nova", "Drip"];
 const NOUNS = ["Rooster", "Hen", "Cluck", "Chick", "Beak", "Wing", "Feather", "Nest"];
+const STOP_WORDS = new Set(["the", "and", "with", "from", "for", "that", "this", "your", "into", "meme", "coin", "token", "chicken", "rooster", "hen", "sui"]);
 const FALLBACK_PALETTES = [
   ["#4da3ff", "#ffb020", "#ff5a36", "#101828"],
   ["#6ee7f9", "#facc15", "#fb7185", "#111827"],
   ["#38bdf8", "#fb923c", "#a3e635", "#0f172a"],
   ["#60a5fa", "#f97316", "#fef08a", "#18181b"],
+  ["#a7f3d0", "#f9a8d4", "#fbbf24", "#111827"],
+  ["#93c5fd", "#fda4af", "#bef264", "#18181b"],
 ];
 
 function hashPrompt(prompt: string) {
@@ -109,9 +113,24 @@ function pick<T>(items: T[], seed: number, offset: number) {
   return items[(seed + offset) % items.length];
 }
 
-function tickerFrom(name: string, seed: number) {
-  const letters = name.replace(/[^a-z]/gi, "").toUpperCase();
-  return `${letters.slice(0, 5)}${String(seed % 999).padStart(3, "0")}`.slice(0, 8);
+function titleCase(value: string) {
+  return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
+}
+
+function promptKeywords(prompt: string) {
+  const words = prompt
+    .toLowerCase()
+    .split(/[^a-z0-9]+/i)
+    .filter((word) => word.length > 2 && !STOP_WORDS.has(word));
+  return [...new Set(words)].slice(0, 5);
+}
+
+function tickerFrom(name: string, keywords: string[], seed: number) {
+  const keywordBase = keywords.length
+    ? keywords.map((word) => word[0]).join("") + keywords[0].slice(1, 4)
+    : name.replace(/[^a-z]/gi, "");
+  const letters = keywordBase.replace(/[^a-z]/gi, "").toUpperCase();
+  return `${letters.slice(0, 5)}${String(seed % 99).padStart(2, "0")}`.slice(0, 8);
 }
 
 function escapeXml(value: string) {
@@ -202,7 +221,22 @@ function modeOverlay(mode: RenderMode, sui: string, yolk: string, flame: string)
   if (mode === "comic cover") {
     return `<path d="M900 70 h210 l-34 86 h-210z" fill="${yolk}" opacity=".9"/><text x="906" y="126" fill="#101828" font-family="Arial" font-size="34" font-weight="900">RARE!</text>`;
   }
+  if (mode === "wanted poster") {
+    return `<rect x="52" y="42" width="1096" height="591" rx="18" fill="none" stroke="${yolk}" stroke-width="10" opacity=".55"/><text x="835" y="108" fill="#fff" font-family="Arial" font-size="31" font-weight="900" opacity=".82">WANTED</text><path d="M820 124 h230" stroke="#fff" stroke-width="4" opacity=".32"/>`;
+  }
+  if (mode === "pixel stamp") {
+    return `<g opacity=".25">${Array.from({ length: 12 }, (_, i) => `<rect x="${90 + i * 88}" y="${90 + (i % 4) * 96}" width="28" height="28" fill="${[sui, yolk, flame][i % 3]}"/>`).join("")}</g>`;
+  }
   return `<g opacity=".18" stroke="#fff" stroke-width="3">${Array.from({ length: 9 }, (_, i) => `<circle cx="${150 + i * 115}" cy="${120 + (i % 3) * 145}" r="${34 + (i % 4) * 12}" fill="none"/>`).join("")}</g>`;
+}
+
+function poseMotion(pose: Pose, sui: string, yolk: string, flame: string) {
+  if (pose === "leaping") return `<g stroke="${yolk}" stroke-width="8" stroke-linecap="round" opacity=".5"><path d="M160 520 l120 -50"/><path d="M190 574 l160 -72"/><path d="M238 620 l112 -44"/></g>`;
+  if (pose === "surfing") return `<path d="M170 548 C310 508 448 610 622 548 S840 492 1030 562" fill="none" stroke="${sui}" stroke-width="20" stroke-linecap="round" opacity=".62"/>`;
+  if (pose === "charging") return `<g stroke="${flame}" stroke-width="7" stroke-linecap="round" opacity=".55">${Array.from({ length: 7 }, (_, i) => `<path d="M${80 + i * 34} ${190 + i * 52} h${130 + i * 12}"/>`).join("")}</g>`;
+  if (pose === "blastoff") return `<path d="M330 572 c-42 22-76 50-104 88 70-12 132-36 178-76z" fill="${flame}" opacity=".88"/><path d="M392 564 c-24 18-40 42-54 72 44-10 80-26 108-58z" fill="${yolk}" opacity=".92"/>`;
+  if (pose === "perched") return `<path d="M210 545 h500" stroke="${yolk}" stroke-width="18" stroke-linecap="round" opacity=".58"/><path d="M260 548 l-45 68 M378 548 l-34 72" stroke="${yolk}" stroke-width="12" stroke-linecap="round" opacity=".42"/>`;
+  return `<g opacity=".22" stroke="#fff" stroke-width="5"><path d="M130 468 C220 424 316 432 410 482"/><path d="M760 190 C850 140 970 150 1060 228"/></g>`;
 }
 
 function promptBadges(prompt: string, seed: number, sui: string, yolk: string, flame: string) {
@@ -222,12 +256,14 @@ function promptBadges(prompt: string, seed: number, sui: string, yolk: string, f
     .join("");
 }
 
-function imageDataUrl(prompt: string, name: string, ticker: string, scene: Scene, seed: number, mode: RenderMode) {
+function imageDataUrl(prompt: string, name: string, ticker: string, scene: Scene, seed: number, mode: RenderMode, pose: Pose) {
   const [sui, yolk, flame, ink] = scene.palette;
   const eyeX = 322 + (seed % 24);
   const crestTilt = (seed % 15) - 7;
   const wing = 555 + (seed % 86);
   const bodySquash = 1 + ((seed % 9) - 4) / 100;
+  const bodyTilt = pose === "charging" ? -6 : pose === "leaping" ? -10 : pose === "blastoff" ? -14 : pose === "perched" ? 4 : 0;
+  const yOffset = pose === "leaping" || pose === "blastoff" ? -22 : pose === "perched" ? 10 : 0;
   const safePrompt = escapeXml(prompt).slice(0, 92);
   const safeName = escapeXml(name);
   const safeTicker = escapeXml(ticker);
@@ -243,8 +279,9 @@ ${modeOverlay(mode, sui, yolk, flame)}
 <circle cx="790" cy="170" r="260" fill="url(#glow)"/>
 ${backgroundMotif(scene, yolk, flame, sui)}
 ${promptBadges(prompt, seed, sui, yolk, flame)}
+${poseMotion(pose, sui, yolk, flame)}
 <g opacity=".24" fill="#fff"><circle cx="120" cy="120" r="10"/><circle cx="1030" cy="440" r="14"/><circle cx="720" cy="78" r="8"/><circle cx="1110" cy="88" r="6"/><path d="M80 570 C220 520 310 650 460 600 S770 530 910 612 S1110 545 1190 585" fill="none" stroke="#fff" stroke-width="5"/></g>
-<g filter="url(#shadow)" transform="translate(120 78) scale(${bodySquash} 1)">
+<g filter="url(#shadow)" transform="translate(120 ${78 + yOffset}) rotate(${bodyTilt} 450 340) scale(${bodySquash} 1)">
 <ellipse cx="445" cy="365" rx="245" ry="175" fill="#fff7d6"/>
 <path d="M280 250 C260 125 360 85 438 130 C508 55 650 100 635 235 C735 270 745 430 627 492 C520 555 335 530 280 435 Z" fill="#fff2b8"/>
 <path d="M356 105 C362 38 432 18 472 76 C517 18 598 46 585 119 C548 92 508 93 478 128 C440 91 402 91 356 105Z" fill="${flame}" transform="rotate(${crestTilt} 470 94)"/>
@@ -281,19 +318,22 @@ export function generateMemeVariant(prompt: string, variation: number): MemeGene
   const semanticSeed = hashPrompt(cleanPrompt);
   const seed = hashPrompt(`${cleanPrompt}:${variation}`);
   const scene = resolveScene(cleanPrompt, seed);
-  const mode = pick(["sticker", "trading card", "glitch poster", "comic cover", "vaporwave"] as const, seed, 29);
-  const variantAdjective = pick([scene.adjective, ...ADJECTIVES, ...TRAITS], seed, 41);
-  const variantNoun = pick([scene.noun, ...NOUNS, ...TRAITS], seed, 53);
+  const keywords = promptKeywords(cleanPrompt);
+  const mode = pick(["sticker", "trading card", "glitch poster", "comic cover", "vaporwave", "wanted poster", "pixel stamp"] as const, seed, 29);
+  const pose = pick(["hero", "leaping", "surfing", "charging", "blastoff", "perched"] as const, seed, 67);
+  const promptLead = keywords[0] ? titleCase(keywords[0]) : scene.adjective;
+  const variantAdjective = pick([promptLead, scene.adjective, ...ADJECTIVES, ...TRAITS], seed, 41);
+  const variantNoun = pick([scene.noun, ...keywords.map(titleCase), ...NOUNS, ...TRAITS], seed, 53);
   const name = `${variantAdjective} ${variantNoun}`;
-  const ticker = tickerFrom(name, seed ^ semanticSeed);
+  const ticker = tickerFrom(name, keywords, seed ^ semanticSeed);
 
   return {
     name,
     ticker,
-    imageUrl: imageDataUrl(cleanPrompt, name, ticker, scene, seed, mode),
-    description: `AI-hatched on Sui from: ${cleanPrompt}`,
+    imageUrl: imageDataUrl(cleanPrompt, name, ticker, scene, seed, mode, pose),
+    description: `AI-hatched from "${cleanPrompt}" with ${pose} energy on Sui.`,
     prompt: cleanPrompt,
     palette: scene.palette,
-    style: `${mode}, ${scene.motif} scene, ${scene.accessory} accessory, ${scene.expression} expression`,
+    style: `${mode}, ${pose} pose, ${scene.motif} scene, ${scene.accessory} accessory, ${scene.expression} expression`,
   };
 }

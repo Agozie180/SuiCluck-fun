@@ -102,13 +102,13 @@ function Metric({ icon, label, value }: { icon: React.ReactNode; label: string; 
 
 function LaunchCard({ launch }: { launch: StoredLaunch }) {
   return (
-    <div className="grid gap-4 rounded-lg border border-white/10 bg-white/5 p-3 sm:grid-cols-[128px_1fr] lg:grid-cols-[128px_1fr_auto] lg:items-center">
+    <div className="grid gap-4 rounded-lg border border-white/10 bg-white/5 p-3 transition hover:border-secondary/30 hover:bg-white/[.07] sm:grid-cols-[128px_1fr] lg:grid-cols-[128px_1fr_auto] lg:items-center">
       <img src={launch.imageUrl} alt={`${launch.name} art`} className="aspect-video w-full rounded-md object-cover sm:w-[128px]" />
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
           <p className="font-bold">{launch.name}</p>
           <span className="rounded-full bg-secondary/15 px-3 py-1 text-xs font-bold text-secondary">${launch.ticker}</span>
-          <span className="rounded-full bg-emerald-400/15 px-3 py-1 text-xs font-bold text-emerald-200">{launch.status}</span>
+          <span className="rounded-full bg-emerald-400/15 px-3 py-1 text-xs font-bold text-emerald-200" title="This launch was saved only after Sui transaction confirmation">{launch.status}</span>
         </div>
         <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{launch.description}</p>
         <div className="mt-2 flex flex-wrap gap-3 text-xs text-muted-foreground">
@@ -127,7 +127,8 @@ function LaunchCard({ launch }: { launch: StoredLaunch }) {
           href={launch.explorerUrl}
           target="_blank"
           rel="noreferrer"
-          className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-white/10 px-3 text-sm font-bold text-white hover:bg-white/10"
+          className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-white/10 px-3 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-white/10"
+          title="Open this transaction in Sui Explorer"
         >
           Explorer <ExternalLink size={14} />
         </a>
