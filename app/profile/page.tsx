@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Check, Coins, Copy, ExternalLink, Rocket, Trophy } from "lucide-react";
+import { CalendarDays, Check, Coins, Copy, ExternalLink, Rocket, Trophy, Wallet } from "lucide-react";
 import { useCurrentAccount } from "@mysten/dapp-kit";
+import { ShareOnX } from "@/components/share-on-x";
 import { ZkLoginButton } from "@/components/zklogin-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getLaunches, subscribeToLaunches, type StoredLaunch } from "@/lib/launch-store";
+import { explorerAddressUrl } from "@/lib/sui";
 
 export default function ProfilePage() {
   const account = useCurrentAccount();
@@ -29,7 +31,7 @@ export default function ProfilePage() {
       <div className="mb-6 flex flex-col justify-between gap-4 md:flex-row md:items-end">
         <div>
           <h1 className="font-display text-4xl font-black">My coop</h1>
-          <p className="text-muted-foreground">Track confirmed launches, digests, locks, and creator fees.</p>
+          <p className="text-muted-foreground">Track confirmed launches, transaction digests, locks, fees, and share links.</p>
         </div>
         <div className="md:min-w-[360px]">
           <ZkLoginButton />
@@ -41,6 +43,19 @@ export default function ProfilePage() {
         <Metric icon={<Coins />} label="Avg creator fee" value={stats.avgFee} />
         <Metric icon={<Trophy />} label="Confirmed" value={String(stats.graduated)} />
       </div>
+
+      {account && (
+        <div className="mt-4 rounded-lg border border-white/10 bg-white/5 p-4 text-sm text-muted-foreground">
+          <p className="flex flex-wrap items-center gap-2">
+            <Wallet size={16} className="text-secondary" />
+            Showing launches for <span className="font-mono text-white">{account.address.slice(0, 8)}...{account.address.slice(-6)}</span>
+            <CopyValue value={account.address} label="Copy wallet address" />
+            <a className="inline-flex items-center gap-1 font-bold text-secondary hover:underline" href={explorerAddressUrl(account.address)} target="_blank" rel="noreferrer">
+              Explorer <ExternalLink size={13} />
+            </a>
+          </p>
+        </div>
+      )}
 
       <Card className="mt-6">
         <CardHeader>
@@ -87,8 +102,8 @@ function Metric({ icon, label, value }: { icon: React.ReactNode; label: string; 
 
 function LaunchCard({ launch }: { launch: StoredLaunch }) {
   return (
-    <div className="grid gap-4 rounded-lg border border-white/10 bg-white/5 p-3 sm:grid-cols-[120px_1fr_auto] sm:items-center">
-      <img src={launch.imageUrl} alt={`${launch.name} art`} className="aspect-video w-full rounded-md object-cover sm:w-[120px]" />
+    <div className="grid gap-4 rounded-lg border border-white/10 bg-white/5 p-3 sm:grid-cols-[128px_1fr] lg:grid-cols-[128px_1fr_auto] lg:items-center">
+      <img src={launch.imageUrl} alt={`${launch.name} art`} className="aspect-video w-full rounded-md object-cover sm:w-[128px]" />
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
           <p className="font-bold">{launch.name}</p>
@@ -96,19 +111,28 @@ function LaunchCard({ launch }: { launch: StoredLaunch }) {
           <span className="rounded-full bg-emerald-400/15 px-3 py-1 text-xs font-bold text-emerald-200">{launch.status}</span>
         </div>
         <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{launch.description}</p>
+        <div className="mt-2 flex flex-wrap gap-3 text-xs text-muted-foreground">
+          <span className="inline-flex items-center gap-1"><CalendarDays size={13} /> {new Date(launch.createdAt).toLocaleDateString()}</span>
+          <span>{Number(BigInt(launch.thresholdMist) / 1_000_000_000n).toLocaleString()} SUI threshold</span>
+          <span>{(launch.creatorFeeBps / 100).toFixed(1)}% fee</span>
+          <span>{(launch.lockBps / 100).toFixed(1)}% lock</span>
+        </div>
         <p className="mt-2 flex flex-wrap items-center gap-2 break-all font-mono text-xs text-white/45">
           {launch.digest}
           <CopyValue value={launch.digest} label="Copy transaction digest" />
         </p>
       </div>
-      <a
-        href={launch.explorerUrl}
-        target="_blank"
-        rel="noreferrer"
-        className="inline-flex items-center justify-center gap-2 rounded-md border border-white/10 px-3 py-2 text-sm font-bold text-white hover:bg-white/10"
-      >
-        Explorer <ExternalLink size={14} />
-      </a>
+      <div className="flex flex-wrap gap-2 lg:flex-col">
+        <a
+          href={launch.explorerUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-white/10 px-3 text-sm font-bold text-white hover:bg-white/10"
+        >
+          Explorer <ExternalLink size={14} />
+        </a>
+        <ShareOnX name={launch.name} ticker={launch.ticker} explorerUrl={launch.explorerUrl} />
+      </div>
     </div>
   );
 }

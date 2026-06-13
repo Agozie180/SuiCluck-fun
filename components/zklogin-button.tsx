@@ -2,12 +2,13 @@
 
 import { useMemo, useState } from "react";
 import { useConnectWallet, useCurrentAccount, useDisconnectWallet, useWallets } from "@mysten/dapp-kit";
-import { Check, CheckCircle2, Copy, Loader2, LogOut, TriangleAlert } from "lucide-react";
+import { Check, CheckCircle2, Copy, Loader2, LogOut, Mail, Send, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { WalletConnectButton } from "@/components/WalletConnectButton";
 
 const enokiApiKey = process.env.NEXT_PUBLIC_ENOKI_API_KEY ?? "";
 const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? "";
+const emailClientId = process.env.NEXT_PUBLIC_ENOKI_EMAIL_CLIENT_ID ?? "";
 
 function mask(value: string) {
   if (!value) return "missing";
@@ -23,10 +24,12 @@ function getFriendlyError(error: unknown) {
     return "Unable to reach Enoki. Check internet/CORS, ad blockers, localhost origin allowlist, and restart the dev server after changing .env.local.";
   }
   if (/popup|closed/i.test(message)) {
-    return "The login popup was blocked or closed. Allow popups for localhost:3000 and try Google again.";
+    return "The login popup was blocked or closed. Allow popups for this site and try again.";
   }
   return message;
 }
+
+type AuthProvider = "google" | "email" | "twitter";
 
 export function ZkLoginButton() {
   const wallets = useWallets();
@@ -34,41 +37,51 @@ export function ZkLoginButton() {
   const disconnectWallet = useDisconnectWallet();
   const account = useCurrentAccount();
   const [error, setError] = useState<string | null>(null);
-  const [busyProvider, setBusyProvider] = useState<"google" | "twitter" | null>(null);
+  const [busyProvider, setBusyProvider] = useState<AuthProvider | null>(null);
   const [showFallback, setShowFallback] = useState(false);
 
-  const googleWallet = useMemo(() => {
-    return wallets.find((wallet) => {
-      const name = wallet.name.toLowerCase();
-      return name.includes("google") || (name.includes("enoki") && name.includes("google"));
-    });
+  const providerWallets = useMemo(() => {
+    const byName = (words: string[]) =>
+      wallets.find((wallet) => {
+        const name = wallet.name.toLowerCase();
+        return words.some((word) => name.includes(word)) || (name.includes("enoki") && words.some((word) => name.includes(word)));
+      });
+    return {
+      google: byName(["google"]),
+      email: byName(["email", "mail"]),
+    };
   }, [wallets]);
 
-  async function connectGoogle() {
-    setBusyProvider("google");
+  async function connectProvider(provider: Exclude<AuthProvider, "twitter">) {
+    setBusyProvider(provider);
     setError(null);
     setShowFallback(false);
 
-    console.info("[SuiCluck zkLogin] Google login requested", {
-      provider: "google",
+    console.info("[SuiCluck zkLogin] login requested", {
+      provider,
       network: "testnet",
       enokiApiKeyLoaded: Boolean(enokiApiKey),
       enokiApiKeyMasked: mask(enokiApiKey),
       googleClientIdLoaded: Boolean(googleClientId),
       googleClientIdMasked: mask(googleClientId),
+      emailClientIdLoaded: Boolean(emailClientId),
+      emailClientIdMasked: mask(emailClientId),
       registeredWallets: wallets.map((wallet) => wallet.name),
     });
 
     try {
       if (!enokiApiKey) throw new Error("NEXT_PUBLIC_ENOKI_API_KEY is missing. Add it to .env.local and restart npm run dev.");
-      if (!googleClientId) throw new Error("NEXT_PUBLIC_GOOGLE_CLIENT_ID is missing. Add the OAuth web client ID to .env.local and restart npm run dev.");
-      if (!googleWallet) throw new Error("Enoki Google wallet is not registered yet. Wait a second, refresh, or check provider setup logs.");
+      if (provider === "google" && !googleClientId) throw new Error("NEXT_PUBLIC_GOOGLE_CLIENT_ID is missing. Add the OAuth web client ID to .env.local and restart npm run dev.");
+      if (provider === "email" && !emailClientId) throw new Error("NEXT_PUBLIC_ENOKI_EMAIL_CLIENT_ID is missing. Add the Enoki email provider client ID when your Enoki project has email enabled.");
 
-      await connectWallet.mutateAsync({ wallet: googleWallet });
-      console.info("[SuiCluck zkLogin] Google zkLogin connected");
+      const wallet = providerWallets[provider];
+      if (!wallet) throw new Error(`Enoki ${provider} wallet is not registered yet. Check Enoki provider setup, refresh, or use wallet fallback for the demo.`);
+
+      await connectWallet.mutateAsync({ wallet });
+      console.info("[SuiCluck zkLogin] zkLogin connected", { provider });
     } catch (err) {
       const friendly = getFriendlyError(err);
-      console.error("[SuiCluck zkLogin] Google login failed", err);
+      console.error("[SuiCluck zkLogin] login failed", { provider, err });
       setError(friendly);
       setShowFallback(true);
     } finally {
@@ -78,14 +91,14 @@ export function ZkLoginButton() {
 
   function connectTwitter() {
     setBusyProvider("twitter");
-    const msg = "X/Twitter is not a native provider in @mysten/enoki 1.0.8. For this hackathon build, use Google zkLogin or Connect Sui Wallet fallback. Do not map X to Twitch; that causes Enoki 403 errors.";
+    const msg = "X is shown for the final flow, but this Enoki SDK build does not expose a native X wallet. Use Google, Email if enabled in Enoki, or the Sui Wallet fallback for the live demo.";
     console.warn("[SuiCluck zkLogin] Twitter requested but unsupported by installed Enoki SDK", {
       provider: "twitter",
       supportedNativeProviders: ["google", "facebook", "twitch", "onefc", "playtron"],
     });
     setError(msg);
     setShowFallback(true);
-    setBusyProvider(null);
+    window.setTimeout(() => setBusyProvider(null), 250);
   }
 
   if (account) {
@@ -112,23 +125,9 @@ export function ZkLoginButton() {
   return (
     <div className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-2">
-        <Button
-          onClick={connectGoogle}
-          disabled={Boolean(busyProvider)}
-          className="h-[52px] rounded-lg bg-white px-5 text-base font-black text-black shadow-lg shadow-white/10 transition hover:-translate-y-0.5 hover:bg-gray-100"
-        >
-          {busyProvider === "google" && <Loader2 className="animate-spin" size={18} />}
-          Continue with Google
-        </Button>
-        <Button
-          onClick={connectTwitter}
-          disabled={Boolean(busyProvider)}
-          variant="outline"
-          className="h-[52px] rounded-lg border-white/15 bg-white/5 px-5 text-base font-black text-white transition hover:-translate-y-0.5 hover:bg-white/10"
-        >
-          {busyProvider === "twitter" && <Loader2 className="animate-spin" size={18} />}
-          Continue with X
-        </Button>
+        <AuthButton label="Continue with Google" busy={busyProvider === "google"} disabled={Boolean(busyProvider)} onClick={() => connectProvider("google")} />
+        <AuthButton icon={<Mail size={18} />} label="Continue with Email" busy={busyProvider === "email"} disabled={Boolean(busyProvider)} onClick={() => connectProvider("email")} />
+        <AuthButton icon={<Send size={18} />} label="Continue with X" busy={busyProvider === "twitter"} disabled={Boolean(busyProvider)} onClick={connectTwitter} />
       </div>
 
       {error && (
@@ -138,12 +137,26 @@ export function ZkLoginButton() {
         </div>
       )}
 
-      {showFallback && <WalletConnectButton reason="zkLogin could not complete. You can still launch with a regular Sui wallet for the demo." />}
+      <WalletConnectButton reason={showFallback ? "zkLogin could not complete. You can still launch with a regular Sui wallet for the demo." : "Wallet fallback for judges, popup blockers, or provider configuration issues."} />
 
       <p className="text-xs text-muted-foreground">
-        Debug logs are printed to the browser console with provider, network, key-loaded status, and registered wallet names.
+        Debug logs include provider, network, key-loaded status, and registered wallet names.
       </p>
     </div>
+  );
+}
+
+function AuthButton({ icon, label, busy, disabled, onClick }: { icon?: React.ReactNode; label: string; busy: boolean; disabled: boolean; onClick: () => void }) {
+  return (
+    <Button
+      onClick={onClick}
+      disabled={disabled}
+      variant={label.includes("Google") ? "default" : "outline"}
+      className={`h-[52px] rounded-lg px-5 text-base font-black transition hover:-translate-y-0.5 ${label.includes("Google") ? "bg-white text-black shadow-lg shadow-white/10 hover:bg-gray-100" : "border-white/15 bg-white/5 text-white hover:bg-white/10"}`}
+    >
+      {busy ? <Loader2 className="animate-spin" size={18} /> : icon}
+      {label}
+    </Button>
   );
 }
 

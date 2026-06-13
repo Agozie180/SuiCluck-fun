@@ -87,6 +87,7 @@ const SCENES: Scene[] = [
 ];
 
 const ADJECTIVES = ["Turbo", "Spicy", "Quantum", "Mega", "Diamond", "Lucky", "Viral", "Based"];
+const TRAITS = ["Volt", "Pixel", "Cetus", "Bubble", "Comet", "Vault", "Bonk", "Splash", "Nova", "Drip"];
 const NOUNS = ["Rooster", "Hen", "Cluck", "Chick", "Beak", "Wing", "Feather", "Nest"];
 const FALLBACK_PALETTES = [
   ["#4da3ff", "#ffb020", "#ff5a36", "#101828"],
@@ -110,7 +111,7 @@ function pick<T>(items: T[], seed: number, offset: number) {
 
 function tickerFrom(name: string, seed: number) {
   const letters = name.replace(/[^a-z]/gi, "").toUpperCase();
-  return `${letters.slice(0, 4)}${String(seed % 99).padStart(2, "0")}`.slice(0, 8);
+  return `${letters.slice(0, 5)}${String(seed % 999).padStart(3, "0")}`.slice(0, 8);
 }
 
 function escapeXml(value: string) {
@@ -204,6 +205,23 @@ function modeOverlay(mode: RenderMode, sui: string, yolk: string, flame: string)
   return `<g opacity=".18" stroke="#fff" stroke-width="3">${Array.from({ length: 9 }, (_, i) => `<circle cx="${150 + i * 115}" cy="${120 + (i % 3) * 145}" r="${34 + (i % 4) * 12}" fill="none"/>`).join("")}</g>`;
 }
 
+function promptBadges(prompt: string, seed: number, sui: string, yolk: string, flame: string) {
+  const words = prompt
+    .split(/[^a-z0-9]+/i)
+    .filter((word) => word.length > 2)
+    .slice(0, 4);
+  const selected = words.length ? words : ["Sui", "Meme", "Launch"];
+
+  return selected
+    .map((word, index) => {
+      const x = 798 + ((seed + index * 37) % 250);
+      const y = 468 + index * 38;
+      const fill = [sui, yolk, flame][index % 3];
+      return `<g><rect x="${x}" y="${y}" width="${Math.max(72, word.length * 13)}" height="26" rx="13" fill="${fill}" opacity=".82"/><text x="${x + 12}" y="${y + 18}" fill="#101828" font-family="Arial" font-size="13" font-weight="900">${escapeXml(word.toUpperCase())}</text></g>`;
+    })
+    .join("");
+}
+
 function imageDataUrl(prompt: string, name: string, ticker: string, scene: Scene, seed: number, mode: RenderMode) {
   const [sui, yolk, flame, ink] = scene.palette;
   const eyeX = 322 + (seed % 24);
@@ -224,6 +242,7 @@ function imageDataUrl(prompt: string, name: string, ticker: string, scene: Scene
 ${modeOverlay(mode, sui, yolk, flame)}
 <circle cx="790" cy="170" r="260" fill="url(#glow)"/>
 ${backgroundMotif(scene, yolk, flame, sui)}
+${promptBadges(prompt, seed, sui, yolk, flame)}
 <g opacity=".24" fill="#fff"><circle cx="120" cy="120" r="10"/><circle cx="1030" cy="440" r="14"/><circle cx="720" cy="78" r="8"/><circle cx="1110" cy="88" r="6"/><path d="M80 570 C220 520 310 650 460 600 S770 530 910 612 S1110 545 1190 585" fill="none" stroke="#fff" stroke-width="5"/></g>
 <g filter="url(#shadow)" transform="translate(120 78) scale(${bodySquash} 1)">
 <ellipse cx="445" cy="365" rx="245" ry="175" fill="#fff7d6"/>
@@ -263,8 +282,10 @@ export function generateMemeVariant(prompt: string, variation: number): MemeGene
   const seed = hashPrompt(`${cleanPrompt}:${variation}`);
   const scene = resolveScene(cleanPrompt, seed);
   const mode = pick(["sticker", "trading card", "glitch poster", "comic cover", "vaporwave"] as const, seed, 29);
-  const name = `${scene.adjective} ${scene.noun}`;
-  const ticker = tickerFrom(name, semanticSeed);
+  const variantAdjective = pick([scene.adjective, ...ADJECTIVES, ...TRAITS], seed, 41);
+  const variantNoun = pick([scene.noun, ...NOUNS, ...TRAITS], seed, 53);
+  const name = `${variantAdjective} ${variantNoun}`;
+  const ticker = tickerFrom(name, seed ^ semanticSeed);
 
   return {
     name,

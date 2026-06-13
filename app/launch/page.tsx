@@ -1,6 +1,5 @@
 import { ShieldCheck } from "lucide-react";
 import { LaunchForm } from "@/components/launch-form";
-import { WalletConnectButton } from "@/components/WalletConnectButton";
 import { ZkLoginButton } from "@/components/zklogin-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -15,7 +14,7 @@ export default function LaunchPage() {
         </p>
       </div>
 
-      <div className="mb-5 grid gap-4 lg:grid-cols-[1.2fr_.8fr]">
+      <div className="mb-5">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><ShieldCheck className="text-secondary" /> zkLogin</CardTitle>
@@ -24,7 +23,6 @@ export default function LaunchPage() {
             <ZkLoginButton />
           </CardContent>
         </Card>
-        <WalletConnectButton reason="Fallback if Enoki rejects the request, Google popup is blocked, or X/Twitter is unavailable." />
       </div>
 
       <LaunchForm />

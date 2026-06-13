@@ -2,9 +2,10 @@ import { getJsonRpcFullnodeUrl, SuiJsonRpcClient } from "@mysten/sui/jsonRpc";
 import { Transaction } from "@mysten/sui/transactions";
 
 export const suiNetwork = process.env.NEXT_PUBLIC_SUI_NETWORK ?? "testnet";
+export const suiRpcUrl = process.env.NEXT_PUBLIC_SUI_RPC_URL || getJsonRpcFullnodeUrl("testnet");
 export const suiClient = new SuiJsonRpcClient({
   network: suiNetwork as "mainnet" | "testnet" | "devnet" | "localnet",
-  url: process.env.NEXT_PUBLIC_SUI_RPC_URL || getJsonRpcFullnodeUrl("testnet"),
+  url: suiRpcUrl,
 });
 
 export const suicluckPackageId =
@@ -30,6 +31,10 @@ export type LaunchTxInput = {
 
 export function explorerTxUrl(digest: string) {
   return `https://suiexplorer.com/txblock/${digest}?network=${suiNetwork}`;
+}
+
+export function explorerAddressUrl(address: string) {
+  return `https://suiexplorer.com/address/${address}?network=${suiNetwork}`;
 }
 
 export function mistFromSui(sui: number) {
@@ -95,6 +100,56 @@ export function buildDemoLaunchAnchorTx(creator: string) {
   const [anchorCoin] = tx.splitCoins(tx.gas, [tx.pure.u64(1_000_000n)]);
   tx.transferObjects([anchorCoin], tx.pure.address(creator));
   return tx;
+}
+
+type TransactionBlockResponse = {
+  error?: { message?: string };
+  result?: {
+    digest?: string;
+    effects?: {
+      status?: {
+        status?: "success" | "failure";
+        error?: string;
+      };
+    };
+  };
+};
+
+export async function waitForTransactionConfirmation(digest: string, timeoutMs = 24_000) {
+  const started = Date.now();
+
+  while (Date.now() - started < timeoutMs) {
+    const response = await fetch(suiRpcUrl, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: Date.now(),
+        method: "sui_getTransactionBlock",
+        params: [
+          digest,
+          {
+            showEffects: true,
+            showInput: false,
+            showEvents: false,
+            showObjectChanges: false,
+            showBalanceChanges: false,
+          },
+        ],
+      }),
+    });
+    const body = (await response.json().catch(() => ({}))) as TransactionBlockResponse;
+    const status = body.result?.effects?.status;
+
+    if (status?.status === "success") return body.result;
+    if (status?.status === "failure") {
+      throw new Error(status.error || "Sui confirmed the transaction as failed.");
+    }
+
+    await new Promise((resolve) => window.setTimeout(resolve, 1_500));
+  }
+
+  throw new Error("Transaction digest was returned, but Sui did not confirm it before timeout. Check Explorer before relaunching.");
 }
 
 export async function requestSponsoredExecution(txBytes: string, signature: string) {

@@ -31,7 +31,9 @@ export function AIMemeGenerator({ onGenerated }: { onGenerated: (meme: Generated
 
     try {
       await new Promise((resolve) => window.setTimeout(resolve, 760));
-      const variation = Date.now() + Math.floor(Math.random() * 1_000_000);
+      const variation = window.crypto?.getRandomValues
+        ? window.crypto.getRandomValues(new Uint32Array(1))[0]
+        : Date.now() + Math.floor(Math.random() * 1_000_000);
       let result: GeneratedMeme;
 
       try {
@@ -146,6 +148,7 @@ export function AIMemeGenerator({ onGenerated }: { onGenerated: (meme: Generated
             </div>
             <p className="mt-2 text-sm text-muted-foreground">{meme.description}</p>
             <p className="mt-2 text-xs font-semibold text-white/45">{meme.style}</p>
+            <p className="mt-1 text-xs text-secondary/80">Generate again for a fresh name, ticker, layout, and art direction.</p>
           </div>
         )}
       </CardContent>

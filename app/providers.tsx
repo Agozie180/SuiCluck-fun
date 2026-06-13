@@ -9,6 +9,7 @@ import { suiClient } from "@/lib/sui";
 
 const enokiApiKey = process.env.NEXT_PUBLIC_ENOKI_API_KEY ?? "";
 const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? "";
+const emailClientId = process.env.NEXT_PUBLIC_ENOKI_EMAIL_CLIENT_ID ?? "";
 const appNetwork = (process.env.NEXT_PUBLIC_SUI_NETWORK ?? "testnet") as "mainnet" | "testnet" | "devnet" | "localnet";
 const rpcUrl = process.env.NEXT_PUBLIC_SUI_RPC_URL || getJsonRpcFullnodeUrl("testnet");
 
@@ -33,6 +34,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
       enokiApiKeyMasked: mask(enokiApiKey),
       googleClientIdLoaded: Boolean(googleClientId),
       googleClientIdMasked: mask(googleClientId),
+      emailClientIdLoaded: Boolean(emailClientId),
+      emailClientIdMasked: mask(emailClientId),
       twitterNativeSupport: false,
     });
 
@@ -41,28 +44,37 @@ export function Providers({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    const providers: Record<string, unknown> = {
+      google: {
+        clientId: googleClientId,
+        redirectUrl: process.env.NEXT_PUBLIC_ZKLOGIN_REDIRECT_URI || `${window.location.origin}/auth/callback`,
+        extraParams: { scope: "openid email profile" },
+      },
+    };
+
+    if (emailClientId) {
+      providers.email = {
+        clientId: emailClientId,
+        redirectUrl: process.env.NEXT_PUBLIC_ZKLOGIN_REDIRECT_URI || `${window.location.origin}/auth/callback`,
+      };
+    }
+
     const { unregister } = registerEnokiWallets({
       apiKey: enokiApiKey,
       client: suiClient as any,
       network: "testnet",
-      providers: {
-        google: {
-          clientId: googleClientId,
-          redirectUrl: process.env.NEXT_PUBLIC_ZKLOGIN_REDIRECT_URI || `${window.location.origin}/auth/callback`,
-          extraParams: { scope: "openid email profile" },
-        },
-      },
+      providers: providers as any,
       windowFeatures: "popup,width=480,height=720,left=100,top=100",
     });
 
-    console.info("[SuiCluck zkLogin] Enoki Google wallet registered for testnet");
+    console.info("[SuiCluck zkLogin] Enoki wallets registered for testnet", Object.keys(providers));
     return () => unregister();
   }, [providerReady]);
 
   return (
     <QueryClientProvider client={queryClient}>
       <SuiClientProvider networks={networkConfig} defaultNetwork="testnet">
-        <WalletProvider autoConnect preferredWallets={["Google", "Sui Wallet", "Slush"]}>
+        <WalletProvider autoConnect preferredWallets={["Google", "Email", "Sui Wallet", "Slush"]}>
           {children}
         </WalletProvider>
       </SuiClientProvider>

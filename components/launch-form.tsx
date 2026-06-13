@@ -1,9 +1,11 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import { Check, Coins, Copy, Egg, ExternalLink, Gauge, Lock, Rocket, ShieldCheck } from "lucide-react";
+import { Check, CheckCircle2, Coins, Copy, Egg, ExternalLink, Gauge, Loader2, Lock, Rocket, ShieldCheck } from "lucide-react";
 import { useCurrentAccount, useSignAndExecuteTransaction } from "@mysten/dapp-kit";
 import { AIMemeGenerator, type GeneratedMeme } from "@/components/ai-meme-generator";
+import { FiatOnramp } from "@/components/fiat-onramp";
+import { ShareOnX } from "@/components/share-on-x";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -13,6 +15,7 @@ import {
   mistFromSui,
   platformObjectId,
   suicluckPackageId,
+  waitForTransactionConfirmation,
 } from "@/lib/sui";
 import { saveLaunch } from "@/lib/launch-store";
 
@@ -43,9 +46,11 @@ export function LaunchForm() {
   const manualTickerRef = useRef(false);
   const [launchResult, setLaunchResult] = useState<{ digest: string; url: string } | null>(null);
   const [launchError, setLaunchError] = useState<string | null>(null);
+  const [launchStep, setLaunchStep] = useState<"idle" | "wallet" | "confirming" | "saved">("idle");
   const account = useCurrentAccount();
   const signAndExecute = useSignAndExecuteTransaction();
   const address = account?.address;
+  const launching = launchStep === "wallet" || launchStep === "confirming";
 
   const estimate = useMemo(
     () => Math.min(99, Math.round((threshold / 1000) * 5 + lock / 2 + creatorFee * 3)),
@@ -63,6 +68,7 @@ export function LaunchForm() {
   async function launch() {
     setLaunchError(null);
     setLaunchResult(null);
+    setLaunchStep("idle");
 
     if (!address) {
       setLaunchError("Connect Google zkLogin or a Sui Wallet before launching.");
@@ -70,6 +76,7 @@ export function LaunchForm() {
     }
 
     try {
+      setLaunchStep("wallet");
       const transaction = buildDemoLaunchAnchorTx(address);
       const result = await signAndExecute.mutateAsync({
         transaction,
@@ -81,6 +88,8 @@ export function LaunchForm() {
         throw new Error("Wallet executed the transaction but did not return a digest.");
       }
 
+      setLaunchStep("confirming");
+      await waitForTransactionConfirmation(digest);
       const url = explorerTxUrl(digest);
       saveLaunch({
         id: digest,
@@ -100,7 +109,9 @@ export function LaunchForm() {
         createdAt: new Date().toISOString(),
       });
       setLaunchResult({ digest, url });
+      setLaunchStep("saved");
     } catch (error) {
+      setLaunchStep("idle");
       const message = error instanceof Error ? error.message : "Launch transaction failed.";
       setLaunchError(
         /rejected|denied|cancel/i.test(message)
@@ -179,30 +190,43 @@ export function LaunchForm() {
               )}
             </div>
             <div className="rounded-lg border border-secondary/20 bg-secondary/10 p-4 text-xs text-secondary">
-              Demo mode executes a real testnet PTB and stores the launch locally. Full bonding-curve creation is available once a published coin witness/treasury cap is supplied.
+              Demo mode executes a real testnet PTB, waits for Sui confirmation, then stores the launch locally. No false success states.
             </div>
+            {launchStep === "wallet" && (
+              <StatusPanel icon={<Loader2 className="animate-spin" size={18} />} title="Waiting for wallet signature" text="Approve the transaction in zkLogin or your Sui wallet." />
+            )}
+            {launchStep === "confirming" && (
+              <StatusPanel icon={<Loader2 className="animate-spin" size={18} />} title="Confirming on Sui testnet" text="Digest received. Waiting for the fullnode to return successful transaction effects." />
+            )}
             {launchError && <div className="rounded-3xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-100">{launchError}</div>}
             {launchResult && (
-              <div className="rounded-3xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-sm text-emerald-100">
-                <p className="font-bold">Launch confirmed on testnet.</p>
+              <div className="rounded-3xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-sm text-emerald-100 shadow-lg shadow-emerald-950/20">
+                <p className="flex items-center gap-2 font-bold">
+                  <CheckCircle2 className="text-emerald-300" size={18} />
+                  Launch confirmed on testnet.
+                </p>
                 <p className="mt-1 flex flex-wrap items-center gap-2 break-all font-mono text-xs">
                   {launchResult.digest}
                   <CopyValue value={launchResult.digest} label="Copy digest" />
                 </p>
-                <a className="mt-3 inline-flex items-center gap-2 font-bold text-emerald-200 underline" href={launchResult.url} target="_blank" rel="noreferrer">
-                  View on Sui Explorer <ExternalLink size={14} />
-                </a>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <a className="inline-flex h-11 items-center gap-2 rounded-lg border border-emerald-300/20 px-4 font-bold text-emerald-100 hover:bg-emerald-300/10" href={launchResult.url} target="_blank" rel="noreferrer">
+                    View on Sui Explorer <ExternalLink size={14} />
+                  </a>
+                  <ShareOnX name={meme.name} ticker={meme.ticker} explorerUrl={launchResult.url} />
+                </div>
               </div>
             )}
-            <Button size="lg" variant="secondary" className="w-full text-lg" onClick={launch} disabled={signAndExecute.status === "pending" || !address}>
-              <Rocket size={20} />
-              {signAndExecute.status === "pending" ? "Confirm in wallet..." : "Launch on testnet"}
+            <Button size="lg" variant="secondary" className="w-full text-lg" onClick={launch} disabled={launching || !address}>
+              {launching ? <Loader2 className="animate-spin" size={20} /> : <Rocket size={20} />}
+              {launchStep === "wallet" ? "Confirm in wallet..." : launchStep === "confirming" ? "Confirming on Sui..." : "Launch on testnet"}
             </Button>
           </CardContent>
         </Card>
       </div>
 
       <div className="space-y-5">
+        <FiatOnramp walletAddress={address} />
         <AIMemeGenerator onGenerated={handleGenerated} />
         <Card>
           <CardHeader>
@@ -231,6 +255,15 @@ export function LaunchForm() {
           </CardContent>
         </Card>
       </div>
+    </div>
+  );
+}
+
+function StatusPanel({ icon, title, text }: { icon: React.ReactNode; title: string; text: string }) {
+  return (
+    <div className="rounded-3xl border border-primary/25 bg-primary/10 p-4 text-sm">
+      <p className="flex items-center gap-2 font-black text-primary">{icon}{title}</p>
+      <p className="mt-1 text-muted-foreground">{text}</p>
     </div>
   );
 }
